@@ -7,6 +7,7 @@ use App\Models\Demande;
 use App\Http\Requests\StoreDemandeRequest;
 use App\Http\Requests\UpdateDemandeRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class DemandeController extends Controller
 {
@@ -157,6 +158,19 @@ class DemandeController extends Controller
             'message' => 'stats',
             'total' => $totale,
             'data' => $formattedData,
+        ]);
+    }
+
+    public function updateDemande(Request $request, Demande $demande)
+    {
+
+        $demande->status = $request->data;
+        // return print($demande);
+        $demande->update();
+        return response()->json([
+            'success' => true,
+            'message' => 'User created successfully',
+            'data' => $demande,
         ]);
     }
 }

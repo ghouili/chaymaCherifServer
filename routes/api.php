@@ -13,6 +13,7 @@ Route::post('/users/signin', [UsersController::class, 'SignIn']);
 Route::post('/users/adduser', [UsersController::class, 'AddUser']);
 Route::get('/users/stats', [UsersController::class, 'getUserCountByRole']);
 Route::get('/users/count', [UsersController::class, 'getUserCount']);
+Route::put('/demandes/status/{demande}', [DemandeController::class, 'updateDemande']);
 Route::get('/demandes/stats', [DemandeController::class, 'getDemandeCount']);
 Route::get('/demandes/stats/years', [DemandeController::class, 'getDemandePerYear']);
 

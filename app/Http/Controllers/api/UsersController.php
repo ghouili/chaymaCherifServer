@@ -295,4 +295,5 @@ class UsersController extends Controller
             'data' => $percentages,
         ]);
     }
+    
 }
