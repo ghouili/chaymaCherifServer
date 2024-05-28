@@ -8,10 +8,12 @@ use App\Mail\Contact;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class UsersController extends Controller
 {
@@ -46,28 +48,34 @@ class UsersController extends Controller
      */
     public function show(User $user)
     {
-        return response()->json([
-            'success' => true,
-            'message' => 'User found successfully',
-            'data' => $user,
-        ]);
+        if ($user) {
+            return response()->json([
+                'success' => true,
+                'message' => 'User found successfully',
+                'data' => $user,
+            ]);
+        }
+            return response()->json([
+                'success' => true,
+                'message' => 'User doesnt Exist',
+                // 'data' => $user,
+            ]);
+
+
     }
 
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $user)
+    public function update(UserRequest $request, User $user)
     {
-        // $user->update($request->validated());
-
-        // $validatedData = $request->validated();
-        return dd($request);
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => 'User created successfully',
-        //     'data' => $user,
-        // ]);
+        $user->update($request->validated());
+        return response()->json([
+            'success' => true,
+            'message' => 'User created successfully',
+            'data' => $user,
+        ]);
     }
 
     /**
@@ -91,6 +99,7 @@ class UsersController extends Controller
     public function SignUp(UserRequest $request)
     {
         try {
+
             $validatedData = $request->validated();
 
             $validatedData['password'] = Hash::make($validatedData['password']);
@@ -99,13 +108,17 @@ class UsersController extends Controller
                 $imageName = Str::random(32) . "." . $request->avatar->getClientOriginalExtension();
                 $validatedData['avatar'] = $imageName;
                 $request->avatar->move(public_path() . '/images/', $imageName);
+            } else {
+                $validatedData['avatar'] = "avatar.png";
             }
+
             $user = User::create($validatedData);
             $token = $user->createToken('MyAppToken')->plainTextToken;
 
             return response()->json([
                 'status' => true,
                 'message' => 'User Created Successfully',
+                'userId' => $user,
                 'token' => $token,
             ], 200);
         } catch (\Throwable $th) {
@@ -146,6 +159,7 @@ class UsersController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'User logged in successfully',
+                'userId' => $user,
                 'token' => $token,
             ], 200);
         } catch (\Throwable $th) {
@@ -214,7 +228,7 @@ class UsersController extends Controller
             $user->role = $validatedData['role'];
             $user->cin = $validatedData['cin'];
             $user->password =  Hash::make($password);
-            $user->avatar = $validatedData['avatar'] ?? null;
+            $user->avatar = $validatedData['avatar'] ?? 'avatar.png';
             $user->save();
 
             $data = [
@@ -237,5 +251,48 @@ class UsersController extends Controller
                 'message' => 'User creation failed: ' . $th->getMessage(),
             ], 500);
         }
+    }
+
+
+    public function getUserCount()
+    {
+        $userCount = DB::table('users')
+            ->select(DB::raw('role, count(*) as user_count'))
+            ->groupBy('role')
+            ->get()
+            ->pluck('user_count', 'role');
+
+        return response()->json([
+            'success' => true,
+            'data' => $userCount->toArray(),
+        ]);
+    }
+
+
+    public function getUserCountByRole()
+    {
+
+        $roles = ['etudiant', 'enseignant', 'chef de laboratoire'];
+
+        $data = DB::table('users')
+            ->select(DB::raw('role, count(*) as user_count'))
+            ->whereIn('role', $roles)
+            ->groupBy('role')
+            ->get();
+
+        $totalCount = $data->sum('user_count');
+
+        $percentages = $data->map(function ($item) use ($totalCount) {
+            $percentage = ($item->user_count / $totalCount) * 100;
+            return [
+                'role' => $item->role,
+                'percentage' => number_format($percentage, 2), // Use number_format for better formatting
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $percentages,
+        ]);
     }
 }
